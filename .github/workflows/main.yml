@@ -1,0 +1,41 @@
+name: Security Scan Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  SPECTRAL_DSN: ${{ secrets.SPECTRAL_DSN }}
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install Spectral
+        run: |
+          curl -L 'https://spectral-eu.checkpoint.com/latest/x/sh?key=spu-890d3f51b01847f1845102b7b50332d6' | sh
+          
+      - name: Run Spectral Scan
+        uses: checkpointsw/spectral-github-action@v3
+        with:
+          spectral-dsn: ${{ env.SPECTRAL_DSN }}
+          spectral-args: scan --ok --engines secrets,iac --include-tags base,audit,iac
+
+  build:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Build step
+        run: |
+          echo "Build process would go here"
+          echo "This step only runs if security scan passes"
